@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.summary      = "A native in-app URL router for iOS."
   s.homepage     = "https://github.com/clayallsopp/routable-ios"
   s.author       = { "Clay Allsopp" => "clay@usepropeller.com" }
-  s.source       = { :git => "https://github.com/clayallsopp/routable-ios.git", :tag => version }
+  s.source       = { :git => "https://github.com/ForrestAlfred/routable-ios", :tag => version }
   s.platform     = :ios, '5.0'
   s.source_files = 'Routable/*.{h,m}'
   s.requires_arc = true
