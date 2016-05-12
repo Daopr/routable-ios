@@ -344,6 +344,12 @@ typedef void (^RouterOpenCallback)(NSDictionary *params);
  */
 - (void)open:(NSString *)url animated:(BOOL)animated extraParams:(NSDictionary *)extraParams;
 
+// for soul
+- (void)open:(NSString *)url
+    animated:(BOOL)animated
+ extraParams:(NSDictionary *)extraParams
+   cytoplasm:(id)cytoplasm;
+
 /**
  Get params of a given URL, simply return the params dictionary NOT using a block
  @param url The URL being detected (i.e. "users/16")

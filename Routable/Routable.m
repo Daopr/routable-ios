@@ -49,6 +49,7 @@
 @property (readwrite, nonatomic, strong) NSDictionary *openParams;
 @property (readwrite, nonatomic, strong) NSDictionary *extraParams;
 @property (readwrite, nonatomic, strong) NSDictionary *controllerParams;
+@property (readwrite, nonatomic, strong) id cytoplasm;
 
 @end
 
@@ -252,6 +253,60 @@
 - (void)open:(NSString *)url animated:(BOOL)animated {
   [self open:url animated:animated extraParams:nil];
 }
+- (void)open:(NSString *)url
+    animated:(BOOL)animated
+ extraParams:(NSDictionary *)extraParams
+   cytoplasm:(id)cytoplasm
+{
+    RouterParams *params = [self routerParamsForUrl:url extraParams: extraParams];
+    params.cytoplasm = cytoplasm;
+
+    UPRouterOptions *options = params.routerOptions;
+
+    if (options.callback) {
+        RouterOpenCallback callback = options.callback;
+        callback([params controllerParams]);
+        return;
+    }
+
+    if (!self.navigationController) {
+        if (_ignoresExceptions) {
+            return;
+        }
+
+        @throw [NSException exceptionWithName:@"NavigationControllerNotProvided"
+                                       reason:@"Router#navigationController has not been set to a UINavigationController instance"
+                                     userInfo:nil];
+    }
+
+    UIViewController *controller = [self controllerForRouterParams:params];
+
+    if (self.navigationController.presentedViewController) {
+        [self.navigationController dismissViewControllerAnimated:animated completion:nil];
+    }
+
+    if ([options isModal]) {
+        if ([controller.class isSubclassOfClass:UINavigationController.class]) {
+            [self.navigationController presentViewController:controller
+                                                    animated:animated
+                                                  completion:nil];
+        }
+        else {
+            UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:controller];
+            navigationController.modalPresentationStyle = controller.modalPresentationStyle;
+            navigationController.modalTransitionStyle = controller.modalTransitionStyle;
+            [self.navigationController presentViewController:navigationController
+                                                    animated:animated
+                                                  completion:nil];
+        }
+    }
+    else if (options.shouldOpenAsRootViewController) {
+        [self.navigationController setViewControllers:@[controller] animated:animated];
+    }
+    else {
+        [self.navigationController pushViewController:controller animated:animated];
+    }
+}
 
 - (void)open:(NSString *)url
     animated:(BOOL)animated
@@ -399,17 +454,18 @@
 }
 
 - (UIViewController *)controllerForRouterParams:(RouterParams *)params {
-  SEL CONTROLLER_CLASS_SELECTOR = sel_registerName("allocWithRouterParams:");
-  SEL CONTROLLER_SELECTOR = sel_registerName("initWithRouterParams:");
+  SEL CONTROLLER_CLASS_SELECTOR = sel_registerName("allocWithRouterParams:cytoplasm:");
+  SEL CONTROLLER_SELECTOR = sel_registerName("initWithSoulParams:cytoplasm:");
   UIViewController *controller = nil;
   Class controllerClass = params.routerOptions.openClass;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
   if ([controllerClass respondsToSelector:CONTROLLER_CLASS_SELECTOR]) {
-    controller = [controllerClass performSelector:CONTROLLER_CLASS_SELECTOR withObject:[params controllerParams]];
+    controller = [controllerClass performSelector:CONTROLLER_CLASS_SELECTOR withObject:[params controllerParams] withObject:[params cytoplasm]];
   }
-  else if ([params.routerOptions.openClass instancesRespondToSelector:CONTROLLER_SELECTOR]) {
-    controller = [[params.routerOptions.openClass alloc] performSelector:CONTROLLER_SELECTOR withObject:[params controllerParams]];
+  else
+  if ([params.routerOptions.openClass instancesRespondToSelector:CONTROLLER_SELECTOR]) {
+    controller = [[params.routerOptions.openClass alloc] performSelector:CONTROLLER_SELECTOR withObject:[params controllerParams] withObject:[params cytoplasm]];
   }
 #pragma clang diagnostic pop
   if (!controller) {
